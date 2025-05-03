@@ -1,23 +1,25 @@
 const { createProxyMiddleware } = require("http-proxy-middleware");
+const url = require("url");
 
 module.exports = (req, res) => {
-  let target = "https://vtx.onrender.com";//your website url
-  //   if (
-  //     req.url.startsWith("/api") ||
-  //     req.url.startsWith("/auth") ||
-  //     req.url.startsWith("/banner") ||
-  //     req.url.startsWith("/CollegeTask")
-  //   ) {
-  //     target = "http://106.15.2.32:6969";
-  //   }
+  const parsedUrl = url.parse(req.url, true);
+  const target = parsedUrl.query?.target;
+
+  if (!target || !/^https?:\/\/.+/.test(target)) {
+    res.statusCode = 400;
+    return res.end("Missing or invalid 'target' URL");
+  }
 
   createProxyMiddleware({
     target,
     changeOrigin: true,
-    pathRewrite: {
-      // rewrite request path `/backend`
-      //  /backend/user/login => http://google.com/user/login
-      //   "^/backend/": "/",
+    pathRewrite: (path, req) => {
+  
+      return path.replace(/^\/api\/proxy/, "");
+    },
+    onError(err, req, res) {
+      res.statusCode = 500;
+      res.end("Proxy error: " + err.message);
     },
   })(req, res);
 };
